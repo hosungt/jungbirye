@@ -163,14 +163,14 @@ function lineScale() {
       const origin = size / 2; const range = 10; const cells = range * 2; const step = size / cells;
 
       ctx.clearRect(0, 0, size, size);
-   ctx.lineWidth = (1 / dpr) * lineScale(); ctx.strokeStyle = "#e5e7eb";
+   ctx.lineWidth = (1.5 / dpr) * lineScale(); ctx.strokeStyle = "#e5e7eb";
       for (let i = 0; i <= cells; i++) {
         const pos = Math.round(i * step) + 0.5;
         ctx.beginPath(); ctx.moveTo(pos, 0); ctx.lineTo(pos, size); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(0, pos); ctx.lineTo(size, pos); ctx.stroke();
       }
 
-  ctx.lineWidth = (1.5 / dpr) * lineScale(); ctx.strokeStyle = "black";
+  ctx.lineWidth = (2 / dpr) * lineScale(); ctx.strokeStyle = "black";
       ctx.beginPath(); ctx.moveTo(0, origin + 0.5); ctx.lineTo(size, origin + 0.5); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(origin + 0.5, size); ctx.lineTo(origin + 0.5, 0); ctx.stroke();
 
@@ -225,7 +225,7 @@ function lineScale() {
         }
       }
 ctx.save();
-ctx.lineWidth = (2.4 / dpr) * lineScale();
+ctx.lineWidth = (3.5 / dpr) * lineScale();
 ctx.strokeStyle = style;
 
 
@@ -263,7 +263,7 @@ ctx.strokeStyle = style;
       const toX = (x) => origin + x*step;
       const toY = (y) => origin - y*step;
       ctx.save();
-      ctx.lineWidth = 2.4 / dpr;
+      ctx.lineWidth = 3.5 / dpr;
       ctx.strokeStyle = style;
       ctx.beginPath();
       ctx.moveTo(toX(a.x), toY(a.y));
@@ -613,8 +613,7 @@ function hideFormula(){
 
       });
 
-      // a>0 슬라이더
-// a>0 / a<0 슬라이더: step 동적 조정
+// a>0 / a<0 슬라이더: step 동적 조정 (그대로 사용)
 function adjustStep(slider) {
   const val = Math.abs(parseFloat(slider.value));
   slider.step = (val === 0 || val < 1) ? 0.01 : 0.1;
@@ -624,95 +623,72 @@ function adjustStep(slider) {
 const posSlider = document.getElementById('posSlider');
 const negSlider = document.getElementById('negSlider');
 
-// 실시간 값 반영 + (슬라이더 켜짐일 때만) 수식 보이기
-posSlider.addEventListener('input', () => {
-  adjustStep(posSlider);
-  const v = parseFloat(posSlider.value);
-  document.getElementById('posVal').textContent = v.toFixed(2);
+// [ADD] 연속 input이 있었는지 추적(각 슬라이더별)
+let posLive = false;
+let negLive = false;
+
+// [ADD] 공용 업데이트 함수
+function updateFromSlider(kind, opts = {}) {
+  const use = document.getElementById('useSlider').checked;
+  const slider = (kind === 'pos') ? posSlider : negSlider;
+  adjustStep(slider);
+
+  const v = parseFloat(slider.value);
+  (kind === 'pos'
+    ? document.getElementById('posVal')
+    : document.getElementById('negVal')
+  ).textContent = isFinite(v) ? v.toFixed(2) : '0';
+
+  // 그래프도 즉시 갱신
   fitAndDraw(v);
 
-  // 체크박스가 켜져 있을 때만, a>0 영역(4사분면 내부 직사각형)에 수식 표시
-  if (document.getElementById('useSlider').checked) {
-    showFormula(v, 'pos');  // 'pos' => (x=2~8, y=-5~-2) 영역
+  if (use) {
+    showFormula(v, kind === 'pos' ? 'pos' : 'neg');
   }
-});
 
-negSlider.addEventListener('input', () => {
-  adjustStep(negSlider);
-  const v = parseFloat(negSlider.value);
-  document.getElementById('negVal').textContent = v.toFixed(2);
-  fitAndDraw(v);
-
-  // 체크박스가 켜져 있을 때만, a<0 영역(3사분면 내부 직사각형)에 수식 표시
-  if (document.getElementById('useSlider').checked) {
-    showFormula(v, 'neg');  // 'neg' => (x=-8~-2, y=-5~-2) 영역
+  // 옵션 처리
+  //  - opts.markLive: 연속 input이 있었음을 표시
+  //  - opts.hideIfLive: 드래그 동안 live가 있었던 브라우저라면 지금 즉시 숨김(데스크톱 UX)
+  //  - opts.ephemeralIfNoLive: live가 없던 브라우저(iOS 구형 등)는 잠깐 보여주고 자동 숨김
+  if (opts.markLive) {
+    if (kind === 'pos') posLive = true; else negLive = true;
   }
-});
-
-// --- 터치 호환을 위한 보조 플래그: 드래그 중 연속 input이 있었는지 ---
-let sliderWasLive = false;
-
-// a>0 슬라이더 input (연속 업데이트가 되는 브라우저용)
-posSlider.addEventListener('input', () => {
-  adjustStep(posSlider);
-  const v = parseFloat(posSlider.value);
-  document.getElementById('posVal').textContent = v.toFixed(2);
-  fitAndDraw(v);
-  if (document.getElementById('useSlider').checked) {
-    showFormula(v, 'pos');
-    sliderWasLive = true;     // 연속 input이 있었다!
+  if (opts.hideIfLive) {
+    const live = (kind === 'pos') ? posLive : negLive;
+    if (live) {
+      hideFormula();
+      if (kind === 'pos') posLive = false; else negLive = false;
+    }
   }
-});
-
-// a<0 슬라이더 input
-negSlider.addEventListener('input', () => {
-  adjustStep(negSlider);
-  const v = parseFloat(negSlider.value);
-  document.getElementById('negVal').textContent = v.toFixed(2);
-  fitAndDraw(v);
-  if (document.getElementById('useSlider').checked) {
-    showFormula(v, 'neg');
-    sliderWasLive = true;
+  if (opts.ephemeralIfNoLive) {
+    const live = (kind === 'pos') ? posLive : negLive;
+    if (!live && use) {
+      // iOS 일부 브라우저: change만 옴 → 0.8s 정도 표시 후 자동 숨김
+      setTimeout(hideFormula, 800);
+    }
+    if (kind === 'pos') posLive = false; else negLive = false;
   }
-});
+}
 
-// 일부 터치 브라우저는 input 대신 change만 발생 → change에서도 1회 표시
-posSlider.addEventListener('change', () => {
-  const v = parseFloat(posSlider.value);
-  document.getElementById('posVal').textContent = v.toFixed(2);
-  fitAndDraw(v);
-  if (document.getElementById('useSlider').checked) {
-    showFormula(v, 'pos');
-    // 연속 input이 없던 환경에서는 잠깐 보여주고 사라지도록 살짝 딜레이 후 숨김
-    if (!sliderWasLive) setTimeout(hideFormula, 800);
-  }
-  sliderWasLive = false; // 이번 사이클 종료
-});
+// === 이벤트 바인딩 ===
+// 1) 드래그 중 연속 갱신되는 환경(데스크톱/신형 모바일)
+posSlider.addEventListener('input', () => updateFromSlider('pos', { markLive: true }));
+negSlider.addEventListener('input', () => updateFromSlider('neg', { markLive: true }));
 
-negSlider.addEventListener('change', () => {
-  const v = parseFloat(negSlider.value);
-  document.getElementById('negVal').textContent = v.toFixed(2);
-  fitAndDraw(v);
-  if (document.getElementById('useSlider').checked) {
-    showFormula(v, 'neg');
-    if (!sliderWasLive) setTimeout(hideFormula, 800);
-  }
-  sliderWasLive = false;
-});
+// 2) 드래그 종료 시점 (모든 환경 공통으로 한 번 더 반영)
+posSlider.addEventListener('pointerup', () => updateFromSlider('pos', { hideIfLive: true }));
+negSlider.addEventListener('pointerup', () => updateFromSlider('neg', { hideIfLive: true }));
 
-// 포인터를 놓는 순간에는, 드래그 중 연속 input이 있었던 경우에만 즉시 숨김
-posSlider.addEventListener('pointerup', () => {
-  if (sliderWasLive) hideFormula();
-  sliderWasLive = false;
-});
-negSlider.addEventListener('pointerup', () => {
-  if (sliderWasLive) hideFormula();
-  sliderWasLive = false;
+// 3) iOS 계열 보완: pointerup 대신 touchend/click/change만 오는 경우가 있어 모두 반영
+['change', 'click', 'touchend'].forEach(ev => {
+  posSlider.addEventListener(ev, () => updateFromSlider('pos', { ephemeralIfNoLive: true }));
+  negSlider.addEventListener(ev, () => updateFromSlider('neg', { ephemeralIfNoLive: true }));
 });
 
 // 초기 step 세팅
 adjustStep(posSlider);
 adjustStep(negSlider);
+
 
 
     }
