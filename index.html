@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>정비례 마스터 – 호성T –</title>
+  <title>호성T와 함께 정비례 마스터하기</title>
   <style>
     :root {
       --bg: #0b1020;
@@ -124,7 +124,7 @@
 </head>
 <body>
   <div class="header">
-    <div class="title">정비례 마스터 – 호성T –</div>
+    <div class="title">호성T와 함께 정비례 마스터하기</div>
     <div class="modes" id="modeButtons">
       <button class="mode-btn active" data-mode="explore">그래프 모양 알아보기</button>
       <button class="mode-btn" data-mode="eq-to-graph">식을 그래프로 바꾸기</button>
@@ -163,14 +163,14 @@ function lineScale() {
       const origin = size / 2; const range = 10; const cells = range * 2; const step = size / cells;
 
       ctx.clearRect(0, 0, size, size);
-   ctx.lineWidth = (1.5 / dpr) * lineScale(); ctx.strokeStyle = "#e5e7eb";
+   ctx.lineWidth = (1 / dpr) * lineScale(); ctx.strokeStyle = "#e5e7eb";
       for (let i = 0; i <= cells; i++) {
         const pos = Math.round(i * step) + 0.5;
         ctx.beginPath(); ctx.moveTo(pos, 0); ctx.lineTo(pos, size); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(0, pos); ctx.lineTo(size, pos); ctx.stroke();
       }
 
-  ctx.lineWidth = (2 / dpr) * lineScale(); ctx.strokeStyle = "black";
+  ctx.lineWidth = (1.5 / dpr) * lineScale(); ctx.strokeStyle = "black";
       ctx.beginPath(); ctx.moveTo(0, origin + 0.5); ctx.lineTo(size, origin + 0.5); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(origin + 0.5, size); ctx.lineTo(origin + 0.5, 0); ctx.stroke();
 
@@ -225,7 +225,7 @@ function lineScale() {
         }
       }
 ctx.save();
-ctx.lineWidth = (3.5 / dpr) * lineScale();
+ctx.lineWidth = (2.4 / dpr) * lineScale();
 ctx.strokeStyle = style;
 
 
@@ -263,7 +263,7 @@ ctx.strokeStyle = style;
       const toX = (x) => origin + x*step;
       const toY = (y) => origin - y*step;
       ctx.save();
-      ctx.lineWidth = 3.5 / dpr;
+      ctx.lineWidth = 2.4 / dpr;
       ctx.strokeStyle = style;
       ctx.beginPath();
       ctx.moveTo(toX(a.x), toY(a.y));
@@ -302,7 +302,7 @@ ctx.strokeStyle = style;
     // 그래프→식 전용
     const GRAPH_COEFFS = [-4, -3, -2, -1, 1, 2, 3, 4, 1/2, 1/3, 1/4, -1/2, -1/3, -1/4];
     const GRAPH_GAME_LEN = 10;
-    const GRAPH_PER_PROBLEM_TIME = 30;
+    const GRAPH_PER_PROBLEM_TIME = 20;
 
     // ===== LaTeX =====
     function latexFor(a){
@@ -613,7 +613,8 @@ function hideFormula(){
 
       });
 
-// a>0 / a<0 슬라이더: step 동적 조정 (그대로 사용)
+      // a>0 슬라이더
+// a>0 / a<0 슬라이더: step 동적 조정
 function adjustStep(slider) {
   const val = Math.abs(parseFloat(slider.value));
   slider.step = (val === 0 || val < 1) ? 0.01 : 0.1;
@@ -623,72 +624,41 @@ function adjustStep(slider) {
 const posSlider = document.getElementById('posSlider');
 const negSlider = document.getElementById('negSlider');
 
-// [ADD] 연속 input이 있었는지 추적(각 슬라이더별)
-let posLive = false;
-let negLive = false;
-
-// [ADD] 공용 업데이트 함수
-function updateFromSlider(kind, opts = {}) {
-  const use = document.getElementById('useSlider').checked;
-  const slider = (kind === 'pos') ? posSlider : negSlider;
-  adjustStep(slider);
-
-  const v = parseFloat(slider.value);
-  (kind === 'pos'
-    ? document.getElementById('posVal')
-    : document.getElementById('negVal')
-  ).textContent = isFinite(v) ? v.toFixed(2) : '0';
-
-  // 그래프도 즉시 갱신
+// 실시간 값 반영 + (슬라이더 켜짐일 때만) 수식 보이기
+posSlider.addEventListener('input', () => {
+  adjustStep(posSlider);
+  const v = parseFloat(posSlider.value);
+  document.getElementById('posVal').textContent = v.toFixed(2);
   fitAndDraw(v);
 
-  if (use) {
-    showFormula(v, kind === 'pos' ? 'pos' : 'neg');
+  // 체크박스가 켜져 있을 때만, a>0 영역(4사분면 내부 직사각형)에 수식 표시
+  if (document.getElementById('useSlider').checked) {
+    showFormula(v, 'pos');  // 'pos' => (x=2~8, y=-5~-2) 영역
   }
-
-  // 옵션 처리
-  //  - opts.markLive: 연속 input이 있었음을 표시
-  //  - opts.hideIfLive: 드래그 동안 live가 있었던 브라우저라면 지금 즉시 숨김(데스크톱 UX)
-  //  - opts.ephemeralIfNoLive: live가 없던 브라우저(iOS 구형 등)는 잠깐 보여주고 자동 숨김
-  if (opts.markLive) {
-    if (kind === 'pos') posLive = true; else negLive = true;
-  }
-  if (opts.hideIfLive) {
-    const live = (kind === 'pos') ? posLive : negLive;
-    if (live) {
-      hideFormula();
-      if (kind === 'pos') posLive = false; else negLive = false;
-    }
-  }
-  if (opts.ephemeralIfNoLive) {
-    const live = (kind === 'pos') ? posLive : negLive;
-    if (!live && use) {
-      // iOS 일부 브라우저: change만 옴 → 0.8s 정도 표시 후 자동 숨김
-      setTimeout(hideFormula, 800);
-    }
-    if (kind === 'pos') posLive = false; else negLive = false;
-  }
-}
-
-// === 이벤트 바인딩 ===
-// 1) 드래그 중 연속 갱신되는 환경(데스크톱/신형 모바일)
-posSlider.addEventListener('input', () => updateFromSlider('pos', { markLive: true }));
-negSlider.addEventListener('input', () => updateFromSlider('neg', { markLive: true }));
-
-// 2) 드래그 종료 시점 (모든 환경 공통으로 한 번 더 반영)
-posSlider.addEventListener('pointerup', () => updateFromSlider('pos', { hideIfLive: true }));
-negSlider.addEventListener('pointerup', () => updateFromSlider('neg', { hideIfLive: true }));
-
-// 3) iOS 계열 보완: pointerup 대신 touchend/click/change만 오는 경우가 있어 모두 반영
-['change', 'click', 'touchend'].forEach(ev => {
-  posSlider.addEventListener(ev, () => updateFromSlider('pos', { ephemeralIfNoLive: true }));
-  negSlider.addEventListener(ev, () => updateFromSlider('neg', { ephemeralIfNoLive: true }));
 });
+
+negSlider.addEventListener('input', () => {
+  adjustStep(negSlider);
+  const v = parseFloat(negSlider.value);
+  document.getElementById('negVal').textContent = v.toFixed(2);
+  fitAndDraw(v);
+
+  // 체크박스가 켜져 있을 때만, a<0 영역(3사분면 내부 직사각형)에 수식 표시
+  if (document.getElementById('useSlider').checked) {
+    showFormula(v, 'neg');  // 'neg' => (x=-8~-2, y=-5~-2) 영역
+  }
+});
+
+// 드래그(값 확정) 시에는 “움직일 때만” 보이도록 즉시 숨김
+posSlider.addEventListener('change', hideFormula);
+negSlider.addEventListener('change', hideFormula);
+// 포인터를 놓는 순간에도 숨김(모바일/터치 대응)
+posSlider.addEventListener('pointerup', hideFormula);
+negSlider.addEventListener('pointerup', hideFormula);
 
 // 초기 step 세팅
 adjustStep(posSlider);
 adjustStep(negSlider);
-
 
 
     }
@@ -1021,7 +991,7 @@ canvas.addEventListener('pointerup', (e)=>{
           <div id="question" style="margin:8px 0 6px; font-size:16px;">
             <b>문제:</b> <span id="qMath"></span> 의 그래프를 왼쪽 좌표평면에 그려주세요.
           </div>
-          <div class="hint">점은 7개 찍어야 하고, 혹시 잘못 찍었다면 그 점을 드래그하면 돼요. 한 번 더 탭 해 점을 지울 수도 있어요.</div>
+          <div class="hint">점은 7개 찍어야 하고, 혹시 잘못 찍었다면 한 번 더 탭하면 다시 찍을 수 있어요.</div>
           <div class="controls">
             <button id="drawLineBtn" class="btn" disabled>선 그리기</button>
           </div>
