@@ -302,7 +302,7 @@ ctx.strokeStyle = style;
     // 그래프→식 전용
     const GRAPH_COEFFS = [-4, -3, -2, -1, 1, 2, 3, 4, 1/2, 1/3, 1/4, -1/2, -1/3, -1/4];
     const GRAPH_GAME_LEN = 10;
-    const GRAPH_PER_PROBLEM_TIME = 20;
+    const GRAPH_PER_PROBLEM_TIME = 30;
 
     // ===== LaTeX =====
     function latexFor(a){
@@ -649,12 +649,66 @@ negSlider.addEventListener('input', () => {
   }
 });
 
-// 드래그(값 확정) 시에는 “움직일 때만” 보이도록 즉시 숨김
-posSlider.addEventListener('change', hideFormula);
-negSlider.addEventListener('change', hideFormula);
-// 포인터를 놓는 순간에도 숨김(모바일/터치 대응)
-posSlider.addEventListener('pointerup', hideFormula);
-negSlider.addEventListener('pointerup', hideFormula);
+// --- 터치 호환을 위한 보조 플래그: 드래그 중 연속 input이 있었는지 ---
+let sliderWasLive = false;
+
+// a>0 슬라이더 input (연속 업데이트가 되는 브라우저용)
+posSlider.addEventListener('input', () => {
+  adjustStep(posSlider);
+  const v = parseFloat(posSlider.value);
+  document.getElementById('posVal').textContent = v.toFixed(2);
+  fitAndDraw(v);
+  if (document.getElementById('useSlider').checked) {
+    showFormula(v, 'pos');
+    sliderWasLive = true;     // 연속 input이 있었다!
+  }
+});
+
+// a<0 슬라이더 input
+negSlider.addEventListener('input', () => {
+  adjustStep(negSlider);
+  const v = parseFloat(negSlider.value);
+  document.getElementById('negVal').textContent = v.toFixed(2);
+  fitAndDraw(v);
+  if (document.getElementById('useSlider').checked) {
+    showFormula(v, 'neg');
+    sliderWasLive = true;
+  }
+});
+
+// 일부 터치 브라우저는 input 대신 change만 발생 → change에서도 1회 표시
+posSlider.addEventListener('change', () => {
+  const v = parseFloat(posSlider.value);
+  document.getElementById('posVal').textContent = v.toFixed(2);
+  fitAndDraw(v);
+  if (document.getElementById('useSlider').checked) {
+    showFormula(v, 'pos');
+    // 연속 input이 없던 환경에서는 잠깐 보여주고 사라지도록 살짝 딜레이 후 숨김
+    if (!sliderWasLive) setTimeout(hideFormula, 800);
+  }
+  sliderWasLive = false; // 이번 사이클 종료
+});
+
+negSlider.addEventListener('change', () => {
+  const v = parseFloat(negSlider.value);
+  document.getElementById('negVal').textContent = v.toFixed(2);
+  fitAndDraw(v);
+  if (document.getElementById('useSlider').checked) {
+    showFormula(v, 'neg');
+    if (!sliderWasLive) setTimeout(hideFormula, 800);
+  }
+  sliderWasLive = false;
+});
+
+// 포인터를 놓는 순간에는, 드래그 중 연속 input이 있었던 경우에만 즉시 숨김
+posSlider.addEventListener('pointerup', () => {
+  if (sliderWasLive) hideFormula();
+  sliderWasLive = false;
+});
+negSlider.addEventListener('pointerup', () => {
+  if (sliderWasLive) hideFormula();
+  sliderWasLive = false;
+});
 
 // 초기 step 세팅
 adjustStep(posSlider);
@@ -991,7 +1045,7 @@ canvas.addEventListener('pointerup', (e)=>{
           <div id="question" style="margin:8px 0 6px; font-size:16px;">
             <b>문제:</b> <span id="qMath"></span> 의 그래프를 왼쪽 좌표평면에 그려주세요.
           </div>
-          <div class="hint">점은 7개 찍어야 하고, 혹시 잘못 찍었다면 한 번 더 탭하면 다시 찍을 수 있어요.</div>
+          <div class="hint">점은 7개 찍어야 하고, 혹시 잘못 찍었다면 그 점을 드래그하면 돼요. 한 번 더 탭 해 점을 지울 수도 있어요.</div>
           <div class="controls">
             <button id="drawLineBtn" class="btn" disabled>선 그리기</button>
           </div>
