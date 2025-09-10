@@ -783,14 +783,14 @@ adjustStep(negSlider);
     return;
   }
 
-  if (state.canMove && state.points.length < 7){
+  if (state.canMove && state.points.length < 4){
     const g = snapToGrid(x,y);
     if (Number.isInteger(g.x) && Number.isInteger(g.y)){
       state.points.push({x:g.x, y:g.y});
       render(null);
-      if (state.points.length===7){
+      if (state.points.length===4){
         state.canSelectLine = true; const b = document.getElementById('drawLineBtn'); if (b) b.disabled=false;
-        showToast('점 7개 배치 완료! 이제 "선 그리기"를 눌러 두 점을 고르세요.', 'ok', 1800);
+        showToast('점 4개 배치 완료! 이제 "선 그리기"를 눌러 두 점을 고르세요.', 'ok', 1800);
       }
     }
   }
@@ -823,7 +823,7 @@ window.addEventListener('pointerup', (e)=>{
     if (canDelete) {
       // 짧은 탭/클릭 → 점 삭제
       state.points.splice(draggingIndex, 1);
-      if (state.points.length < 7) {
+      if (state.points.length < 4) {
         state.canSelectLine = false;
         const btn = document.getElementById('drawLineBtn');
         if (btn) btn.disabled = true;
@@ -991,7 +991,7 @@ canvas.addEventListener('pointerup', (e)=>{
           <div id="question" style="margin:8px 0 6px; font-size:16px;">
             <b>문제:</b> <span id="qMath"></span> 의 그래프를 왼쪽 좌표평면에 그려주세요.
           </div>
-          <div class="hint">점은 7개 찍어야 하고, 혹시 잘못 찍었다면 한 번 더 탭하면 다시 찍을 수 있어요.</div>
+          <div class="hint">점은 4개 찍어야 하고, 혹시 잘못 찍었다면 한 번 더 탭하면 다시 찍을 수 있어요.</div>
           <div class="controls">
             <button id="drawLineBtn" class="btn" disabled>선 그리기</button>
           </div>
@@ -1066,7 +1066,7 @@ canvas.addEventListener('pointerup', (e)=>{
               render(null);
 
               const msg = hadOffLinePoints
-                ? '7개의 점은 모두 한 직선 위에 있어야 해요. 남은 시간 –10초. 다시 해 보세요.'
+                ? '4개의 점은 모두 한 직선 위에 있어야 해요. 남은 시간 –10초. 다시 해 보세요.'
                 : '그래프를 잘못 그렸어요. 다시 그려보세요. 남은 시간 -10초';
               showToast(msg, 'bad', 3000);
             }
