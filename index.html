@@ -613,63 +613,52 @@ function hideFormula(){
 
       });
 
-// a>0 / a<0 슬라이더: step 동적 조정 (유지)
+      // a>0 슬라이더
+// a>0 / a<0 슬라이더: step 동적 조정
 function adjustStep(slider) {
   const val = Math.abs(parseFloat(slider.value));
   slider.step = (val === 0 || val < 1) ? 0.01 : 0.1;
-}
-
-// === 공통 유틸: 슬라이더 현재 값으로 선 그리기 + 수식 표시 ===
-function updateFromSlider(slider, sign) {
-  // sign: 'pos' | 'neg'
-  adjustStep(slider);
-  const v = parseFloat(slider.value);
-
-  if (sign === 'pos') {
-    document.getElementById('posVal').textContent = v.toFixed(2);
-  } else {
-    document.getElementById('negVal').textContent = v.toFixed(2);
-  }
-
-  // 그래프 미리보기 업데이트
-  fitAndDraw(v);
-
-  // 슬라이더 사용 체크가 켜져 있을 때만 좌표평면 위에 수식 표시
-  if (document.getElementById('useSlider').checked) {
-    showFormula(v, sign); // 'pos'는 4사분면, 'neg'는 3사분면에 표시(기존 로직 재사용)
-  }
 }
 
 // 슬라이더 DOM
 const posSlider = document.getElementById('posSlider');
 const negSlider = document.getElementById('negSlider');
 
-// ① 일반 입력(마우스 드래그/키보드) → 기존과 동일
-posSlider.addEventListener('input', () => updateFromSlider(posSlider, 'pos'));
-negSlider.addEventListener('input', () => updateFromSlider(negSlider, 'neg'));
+// 실시간 값 반영 + (슬라이더 켜짐일 때만) 수식 보이기
+posSlider.addEventListener('input', () => {
+  adjustStep(posSlider);
+  const v = parseFloat(posSlider.value);
+  document.getElementById('posVal').textContent = v.toFixed(2);
+  fitAndDraw(v);
 
-// ② ✅ 포인터 기반 드래그(터치/펜/터치스크린 PC 마우스)에서도 계속 갱신
-['pointerdown', 'pointermove'].forEach(ev => {
-  posSlider.addEventListener(ev, () => updateFromSlider(posSlider, 'pos'));
-  negSlider.addEventListener(ev, () => updateFromSlider(negSlider, 'neg'));
+  // 체크박스가 켜져 있을 때만, a>0 영역(4사분면 내부 직사각형)에 수식 표시
+  if (document.getElementById('useSlider').checked) {
+    showFormula(v, 'pos');  // 'pos' => (x=2~8, y=-5~-2) 영역
+  }
 });
 
-// ③ (호환용) 구형 브라우저/특수 환경을 위한 터치 이벤트 보강
-['touchstart', 'touchmove'].forEach(ev => {
-  posSlider.addEventListener(ev, () => updateFromSlider(posSlider, 'pos'), { passive: true });
-  negSlider.addEventListener(ev, () => updateFromSlider(negSlider, 'neg'), { passive: true });
+negSlider.addEventListener('input', () => {
+  adjustStep(negSlider);
+  const v = parseFloat(negSlider.value);
+  document.getElementById('negVal').textContent = v.toFixed(2);
+  fitAndDraw(v);
+
+  // 체크박스가 켜져 있을 때만, a<0 영역(3사분면 내부 직사각형)에 수식 표시
+  if (document.getElementById('useSlider').checked) {
+    showFormula(v, 'neg');  // 'neg' => (x=-8~-2, y=-5~-2) 영역
+  }
 });
 
-// ④ 드래그 종료 시에는 수식 숨김 (기존 동작 유지)
+// 드래그(값 확정) 시에는 “움직일 때만” 보이도록 즉시 숨김
 posSlider.addEventListener('change', hideFormula);
 negSlider.addEventListener('change', hideFormula);
+// 포인터를 놓는 순간에도 숨김(모바일/터치 대응)
 posSlider.addEventListener('pointerup', hideFormula);
 negSlider.addEventListener('pointerup', hideFormula);
 
-// 초기 step 세팅 (유지)
+// 초기 step 세팅
 adjustStep(posSlider);
 adjustStep(negSlider);
-
 
 
     }
