@@ -995,15 +995,43 @@
   });
 
   // ===== 초기 바인딩 =====
-  window.addEventListener('resize', ()=>{
-    if (state.mode==='idle'){ 
-      fitAndDraw(document.getElementById('kInput')?.value); 
-    } else { 
-      render(null); 
+// ✅ 교체용
+window.addEventListener('resize', ()=>{
+  if (state.mode === 'idle') {
+    // 탐색 모드
+    fitAndDraw(document.getElementById('kInput')?.value);
+  } else if (state.mode === 'graph') {
+    // 그래프→식 모드: 현재 문제의 직선을 유지해서 다시 그리기
+    render(state.a);
+  } else {
+    // 그 외(식→그래프 등)
+    render(null);
+  }
+
+  // 수식 스케일 재계산 + 보이는 수식 재배치(슬라이더용)
+  fixedFormulaScale = null;
+  if (lastFormula.active) {
+    showFormula(lastFormula.a, lastFormula.where);
+  }
+});
+// === (NEW) 온스크린 키보드로 인한 뷰포트 변화까지 커버 ===
+if ('visualViewport' in window) {
+  window.visualViewport.addEventListener('resize', ()=>{
+    if (state.mode === 'idle') {
+      fitAndDraw(document.getElementById('kInput')?.value);
+    } else if (state.mode === 'graph') {
+      // 그래프→식 모드: 현재 직선을 유지해서 다시 그리기
+      render(state.a);
+    } else {
+      render(null);
     }
+    // 슬라이더 수식 오버레이 스케일/위치 재계산
     fixedFormulaScale = null;
-    if (lastFormula.active) { showFormula(lastFormula.a, lastFormula.where); }
-  });
+    if (lastFormula.active) {
+      showFormula(lastFormula.a, lastFormula.where);
+    }
+  }, { passive: true });
+}
 
   window.addEventListener('DOMContentLoaded', ()=>{
     startExplore();
@@ -1018,3 +1046,4 @@
   </script>
 </body>
 </html>
+
