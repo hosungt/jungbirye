@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>호성T와 함께 정비례 마스터하기</title>
+  <title>정비례 마스터</title>
   <style>
     :root {
       --bg: #0b1020;
@@ -25,6 +25,16 @@
       color: #f3f4f6;
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Apple SD Gothic Neo, Roboto, Helvetica, Arial, "맑은 고딕", "Malgun Gothic";
     }
+.watermark {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  font-size: 15px;
+  color: #9ca3af;
+  font-weight: 600;
+  pointer-events: none;
+  z-index: 99;
+}
 
     .header { max-width: 1100px; margin: 20px auto 10px; padding: 0 16px; }
     .title  { font-weight: 800; font-size: clamp(20px, 3.2vw, 36px); letter-spacing: .5px; }
@@ -94,13 +104,19 @@
 
     @media (max-width: 840px) { .wrap { grid-template-columns: 1fr; } }
     .katex .katex-mathml{display:none !important;}
+
+#leaderboardPanel {
+  width: 100%;
+  box-sizing: border-box;
+}
+
   </style>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 </head>
 <body>
   <div class="header">
-    <div class="title">호성T와 함께 정비례 마스터하기</div>
+    <div class="title">정비례 마스터</div>
     <div class="modes" id="modeButtons">
       <button class="mode-btn active" data-mode="explore">그래프 모양 알아보기</button>
       <button class="mode-btn" data-mode="eq-to-graph">식을 그래프로 바꾸기</button>
@@ -118,6 +134,18 @@
     </div>
 
     <div class="panel" id="rightPanel"></div>
+<!-- ✅ 리더보드 패널 (상위 10판) -->
+<div class="panel" id="leaderboardPanel"
+     style="grid-column: 1 / -1; margin-top:16px; margin-bottom:30px;">
+
+  <h3 style="margin-top:0;">나의 기록 (상위 10판)</h3>
+  <div id="leaderboardBody" style="font-size:14px; color:#374151;">
+    아직 기록이 없습니다.
+  </div>
+  </div>
+
+</div>
+
   </div>
 
   <script>
@@ -262,25 +290,110 @@
   }
 
   // ===== 게임 상태 =====
-  const COEFFS = [3, -2, -1, 1, 2, 3, 1/2, 1/3, -1/2, -1/3];
-  const GAME_LEN = 5;
+  const COEFFS = [-4, -3, -2, -1, 1, 2, 3, 4, 1/2, 1/3, 1/4, -1/2, -1/3, -1/4, 2/3, -2/3, 3/4, -3/4, 3/2, -3/2, 4/3, -4/3];
+  const GAME_LEN = 10;
   const PER_PROBLEM_TIME = 60;
 
   const GRAPH_COEFFS = [-4, -3, -2, -1, 1, 2, 3, 4, 1/2, 1/3, 1/4, -1/2, -1/3, -1/4, 2/3, -2/3, 3/4, -3/4, 3/2, -3/2, 4/3, -4/3];
   const GRAPH_GAME_LEN = 10;
   const GRAPH_PER_PROBLEM_TIME = 60;
 
+// ===== 리더보드 =====
+const leaderboard = {
+  eq: [],    // 식→그래프 기록
+  graph: []  // 그래프→식 기록
+};
+
+function addRecord(mode, score) {
+  const arr = leaderboard[mode];
+  arr.push({ score, at: Date.now() });
+
+  arr.sort((a, b) => (b.score - a.score) || (b.at - a.at));
+  if (arr.length > 10) arr.length = 10;
+
+  renderLeaderboard();
+}
+
+function renderLeaderboard() {
+  const box = document.getElementById('leaderboardBody');
+  if (!box) return;
+
+  const fmt = (t) => {
+    try { return new Date(t).toLocaleString(); }
+    catch { return t; }
+  };
+
+  const section = (title, items) => {
+    if (!items || items.length === 0) {
+      return `
+        <div style="margin:8px 0 2px; font-weight:700;">${title}</div>
+        <div style="color:#6b7280;">기록 없음</div>
+      `;
+    }
+
+    const rows = items.map((r, i) => `
+      <tr>
+        <td style="padding:6px 8px; width:3ch; text-align:right; color:#6b7280;">${i+1}</td>
+        <td style="padding:6px 8px; font-weight:700;">${r.score}점</td>
+        <td style="padding:6px 8px; color:#6b7280;">${fmt(r.at)}</td>
+      </tr>
+    `).join('');
+
+    return `
+      <div style="margin:8px 0 6px; font-weight:700;">${title}</div>
+      <table style="border-collapse:collapse; width:100%; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;">
+        <thead>
+          <tr style="background:#f9fafb;">
+            <th style="padding:6px 8px; text-align:right; width:3ch; color:#6b7280;">#</th>
+            <th style="padding:6px 8px; text-align:left;">점수</th>
+            <th style="padding:6px 8px; text-align:left;">기록 시각</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  };
+
+  box.innerHTML = `
+    ${section('식을 그래프로 바꾸기', leaderboard.eq)}
+    ${section('그래프를 식으로 바꾸기', leaderboard.graph)}
+  `;
+}
+
+
   // ===== LaTeX =====
-  function latexFor(a){
-    const sgn = Math.sign(a);
-    const v = Math.abs(a);
-    if (Math.abs(v - 1) < 1e-12) return `y = ${sgn < 0 ? '-' : ''}x`;
-    if (Number.isInteger(a)) return `y = ${a}x`;
-    if (Math.abs(v - 0.5) < 1e-9) return `y = ${sgn < 0 ? '-' : ''}\\frac{1}{2}x`;
-    if (Math.abs(v - (1/3)) < 1e-9) return `y = ${sgn < 0 ? '-' : ''}\\frac{1}{3}x`;
-    if (Math.abs(v - 0.25) < 1e-9) return `y = ${sgn < 0 ? '-' : ''}\\frac{1}{4}x`;
-    return `y = ${a}x`;
+function toFraction(a, tol = 1e-9) {
+  const sign = a < 0 ? -1 : 1;
+  a = Math.abs(a);
+
+  if (Math.abs(a - Math.round(a)) < tol) {
+    return { n: sign * Math.round(a), d: 1 };
   }
+
+  let best = { n: 1, d: 1, err: Infinity };
+  for (let d = 1; d <= 12; d++) {
+    const n = Math.round(a * d);
+    const err = Math.abs(a - n / d);
+    if (err < best.err) best = { n, d, err };
+  }
+
+  return { n: sign * best.n, d: best.d };
+}
+
+function latexFor(a){
+  const { n, d } = toFraction(a);
+
+  if (d === 1) {
+    if (n === 1)  return `y = x`;
+    if (n === -1) return `y = -x`;
+    return `y = ${n}x`;
+  } else {
+    const absN = Math.abs(n);
+    const sign = n < 0 ? '-' : '';
+    return `y = ${sign}\\frac{${absN}}{${d}}x`;
+  }
+}
+
   function renderQuestion(){
     const el = document.getElementById('qMath');
     if (!el || !window.katex) return;
@@ -634,16 +747,21 @@
     }, 5000);
   }
 
-  function finishGame(){
-    resetAllTimers();
-    setRightPanel(`
-      <h3>결과</h3>
-      <p style="font-size:16px;">최종 점수: <b>${state.score}</b>점</p>
-      <div class="controls"><button id="restartBtn" class="btn">다시 하기</button></div>
-    `);
-    document.getElementById('restartBtn').addEventListener('click', ()=> startEqToGraph());
-    render(null);
-  }
+ function finishGame(){
+  resetAllTimers();
+
+  // ⬅️ 추가
+  addRecord('eq', state.score);
+
+  setRightPanel(`
+    <h3>결과</h3>
+    <p style="font-size:16px;">최종 점수: <b>${state.score}</b>점</p>
+    <div class="controls"><button id="restartBtn" class="btn">다시 하기</button></div>
+  `);
+  document.getElementById('restartBtn').addEventListener('click', ()=> startEqToGraph());
+  render(null);
+}
+
 
   // 식→그래프 상호작용 (생략: 기존과 동일)
   let draggingIndex = -1;
@@ -852,15 +970,20 @@
   }
 
   function finishGraphGame(){
-    resetAllTimers();
-    setRightPanel(`
-      <h3>결과</h3>
-      <p style="font-size:16px;">최종 점수: <b>${state.score}</b>점</p>
-      <div class="controls"><button id="gRestartBtn" class="btn">다시 하기</button></div>
-    `);
-    document.getElementById('gRestartBtn').addEventListener('click', ()=> startGraphToEq());
-    render(null);
-  }
+  resetAllTimers();
+
+  // ⬅️ 추가
+  addRecord('graph', state.score);
+
+  setRightPanel(`
+    <h3>결과</h3>
+    <p style="font-size:16px;">최종 점수: <b>${state.score}</b>점</p>
+    <div class="controls"><button id="gRestartBtn" class="btn">다시 하기</button></div>
+  `);
+  document.getElementById('gRestartBtn').addEventListener('click', ()=> startGraphToEq());
+  render(null);
+}
+
 
   // ===== 전역 클릭 핸들러 =====
   document.addEventListener('click', (e)=>{
@@ -871,7 +994,7 @@
       setRightPanel(`
         <h3>식을 그래프로 바꾸기</h3>
         <div class="statbar">
-          <div class="chip">남은 문제: <b id="remainCount">5</b> / 5</div>
+          <div class="chip">남은 문제: <b id="remainCount">10</b> / 10</div>
           <div class="chip">누적 점수: <b id="scoreNow">${state.score}</b></div>
           <div class="chip">남은 시간: <b id="timeLeft">${PER_PROBLEM_TIME}</b>s</div>
         </div>
@@ -1044,7 +1167,8 @@ if ('visualViewport' in window) {
     });
   });
   </script>
+<div class="watermark">Made by HosungT</div>
+
 </body>
 </html>
-
 
